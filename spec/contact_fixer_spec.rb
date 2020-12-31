@@ -1,3 +1,8 @@
+require 'simplecov'
+SimpleCov.start 'rails' do
+  enable_coverage :branch
+  SimpleCov.minimum_coverage_by_file line: 85
+end
 require 'contact_fixer'
 require 'stringio'
 require 'google/apis/people_v1'
@@ -11,9 +16,42 @@ HIGHLIGHTED_PHONE_NUMBER = PHONE_NUMBERS_RAW_FILTER.green + CONTACT_PHONE_NUMBER
 describe ContactFixer do
   before(:each) do
     @svc = instance_double("PeopleServiceService")
-    @mock_phone_number = instance_double("phoneNumbers")
+    @mock_phone_number = instance_double("PhoneNumber")
     @out = StringIO.new
     @cf = ContactFixer.new(@svc, @out)
+  end
+
+  describe '.is_non_roman' do
+    context 'input string contains only "Roman Alphabet" characters' do
+      it 'should return false' do
+       str = "st"
+       expect(ContactFixer.is_non_roman(false))
+      end
+    end
+    context 'input string contains non "Roman Alphabet" characters' do
+      it 'should return true' do
+       str = "מחרוזת"
+       expect(ContactFixer.is_non_roman(true))
+      end
+    end
+  end
+
+  describe '.get_fixed_display_name' do
+    before(:each) do
+      @cf = ContactFixer.new(nil, @out)
+    end
+    context 'display name contains only "Roman Alphabet" characters' do
+      it 'should return the display name without changes' do
+       display_name = "contact"
+       expect(@cf.get_fixed_display_name(display_name)).to eq(display_name)
+      end
+    end
+    context 'display name contains non "Roman Alphabet" characters' do
+      it 'should reverse the order of the display name characters' do
+       display_name = "איש קשר"
+       expect(@cf.get_fixed_display_name(display_name)).to eq(display_name.reverse)
+      end
+    end
   end
 
   describe '.print_connection_phone_numbers' do
@@ -65,7 +103,7 @@ describe ContactFixer do
         end
       end
     end
-  end
+  end  
 
   describe '.print_connections' do
     context 'he has only an email address' do
@@ -85,22 +123,20 @@ describe ContactFixer do
     context 'he has only a phone number' do
       it 'prints the user with the phone number' do
         # Arrange
-        expected_phone_number = "+9721234567"
-        mock_phone_number = instance_double("phoneNumbers")
-        allow(mock_phone_number).to receive(:value).and_return(expected_phone_number)
-        person = instance_double("Person", :names => [], :phone_numbers => [mock_phone_number], :email_addresses => [])
+        allow(@mock_phone_number).to receive(:value).and_return(CONTACT_PHONE_NUMBER)
+        person = instance_double("Person", :names => [], :phone_numbers => [@mock_phone_number], :email_addresses => [])
         allow(@svc).to receive_message_chain(:list_person_connections, :connections) {[person]}
         # Act
         @cf.print_connections(@cf.get_all_contacts)
         # Assert
-        expect(@out.string).to include(expected_phone_number)
+        expect(@out.string).to include(CONTACT_PHONE_NUMBER)
       end
     end
     context 'he has only a name' do
       it 'prints the user with the name' do
         # Arrange
         expected_name = "Al Bundy"
-        mock_name = instance_double("names")
+        mock_name = instance_double("Name")
         allow(mock_name).to receive(:display_name).and_return(expected_name)
         person = instance_double("Person", :names => [mock_name], :phone_numbers => [], :email_addresses => [])
         allow(@svc).to receive_message_chain(:list_person_connections, :connections) {[person]}
@@ -113,13 +149,12 @@ describe ContactFixer do
     context 'he has a phone number and the print filter was defined' do
       it 'print the user with the highlighted phone number' do
         # Arrange
-        svc = instance_double("PeopleServiceService")
-        cf = ContactFixer.new(svc, @out, PHONE_NUMBERS_FILTER)
+        @cf = ContactFixer.new(@svc, @out, PHONE_NUMBERS_FILTER)
         allow(@mock_phone_number).to receive(:value).and_return(CONTACT_PHONE_NUMBER)
         person = instance_double("Person", :names => [], :phone_numbers => [@mock_phone_number], :email_addresses => [])
-        allow(svc).to receive_message_chain(:list_person_connections, :connections) {[person]}
+        allow(@svc).to receive_message_chain(:list_person_connections, :connections) {[person]}
         # Act
-        cf.print_connections(cf.get_all_contacts)
+        @cf.print_connections(@cf.get_all_contacts)
         # Assert
         expect(@out.string).to include(HIGHLIGHTED_PHONE_NUMBER)
       end
@@ -139,6 +174,15 @@ describe ContactFixer do
       end
     end
     context 'contact exists and has no phone numbers' do
+      it 'should print an empty result' do
+       # Arrange
+       fake_person = instance_double('Person', :phone_numbers => nil)
+       fake_connections = instance_double('Connections', :connections => [fake_person])
+       # Act and assert
+       expect(@cf.get_contacts_by_phone_filter(fake_connections,'')).to eq([])
+      end
+    end
+    context 'contact exists and has empty phone number collection' do
       it 'should print an empty result' do
        # Arrange
        fake_person = instance_double('Person', :phone_numbers => [])
@@ -162,15 +206,35 @@ describe ContactFixer do
        # under the sections 'Ranges', 'Modifiers' and 'Exact String Matching'.
        #
        # Act and assert
-       expect(@cf.get_contacts_by_phone_filter(fake_connections,"^.{0}$")).to eq([])
+       expect(@cf.get_contacts_by_phone_filter(fake_connections, '^.{0}$')).to eq([])
+      end
+    end
+    context 'contact exists with number and filter matches' do
+      it 'should print the contact details' do
+       # Arrange
+       allow(@mock_phone_number).to receive(:value).and_return(CONTACT_PHONE_NUMBER)
+       fake_person = instance_double('Person', :phone_numbers => [@mock_phone_number])
+       fake_connections = instance_double('Connections', :connections => [fake_person])
+       # Act and assert
+       expect(@cf.get_contacts_by_phone_filter(fake_connections, '976')).to eq([fake_person])
+      end
+    end
+    context 'contact exists with number and filter is invalid' do
+      it 'should raise a regex expression error' do
+       # Arrange
+       allow(@mock_phone_number).to receive(:value).and_return(CONTACT_PHONE_NUMBER)
+       fake_person = instance_double('Person', :phone_numbers => [@mock_phone_number])
+       fake_connections = instance_double('Connections', :connections => [fake_person])
+       # Act and assert
+       expect { @cf.get_contacts_by_phone_filter(fake_connections, '*') }.to raise_error(RegexpError)
       end
     end
   end
+
   describe '.update_connections_phone_numbers' do
     before(:each) do
       @replacement_pattern = '123'
       @contact_number = "0118-999-881-999-119-725-3"
-      @cf = ContactFixer.new(nil, @out)
     end
     context 'no contacts exist' do
       it 'should return an empty collection' do
@@ -182,13 +246,13 @@ describe ContactFixer do
       end
     end
     context 'contact exists and has no phone numbers' do
-      it 'should return the given connections collection' do
+      it 'should return an empty result' do
         # Arrange
         @cf = ContactFixer.new(nil, @out, '')
         fake_person = instance_double('Person', :phone_numbers => [])
         connections = [fake_person]
         # Act and assert
-        expect(@cf.update_connections_phone_numbers(connections, @replacement_pattern)).to eq(connections)
+        expect(@cf.update_connections_phone_numbers(connections, @replacement_pattern)).to eq([])
       end
     end
     context 'contact exists with number and filter matches' do
@@ -196,8 +260,10 @@ describe ContactFixer do
         # Arrange
         @cf = ContactFixer.new(nil, @out, '3$')
         expected_number = "0118-999-881-999-119-725-123"
-        expect(@mock_phone_number).to receive(:value).and_return(@contact_number, expected_number)
+        expect(@mock_phone_number).to receive(:value).and_return(@contact_number)
+        expect(@mock_phone_number).to receive(:value).and_return(expected_number).exactly(2).times
         allow(@mock_phone_number).to receive(:value=).with(expected_number)
+
         fake_person = instance_double('Person', :phone_numbers => [@mock_phone_number], :names => [], :email_addresses => [])
         connections = [fake_person]
         # Act
