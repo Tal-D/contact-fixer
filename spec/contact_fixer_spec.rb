@@ -127,7 +127,6 @@ describe ContactFixer do
 
   describe '.get_contacts_by_phone_filter' do
     before(:each) do
-      @fake_number = instance_double("PhoneNumber")
       @cf = ContactFixer.new(nil, @out)
     end
     context 'no contacts exist' do
@@ -150,8 +149,8 @@ describe ContactFixer do
     context 'contact exists with number and filter is empty' do
       it 'should print an empty result' do
        # Arrange
-       allow(@fake_number).to receive(:value).and_return(CONTACT_PHONE_NUMBER)
-       fake_person = instance_double('Person', :phone_numbers => [@fake_number])
+       allow(@mock_phone_number).to receive(:value).and_return(CONTACT_PHONE_NUMBER)
+       fake_person = instance_double('Person', :phone_numbers => [@mock_phone_number])
        fake_connections = instance_double('Connections', :connections => [fake_person])
        # Checks if the result does not contain characters between the start and the end of the line:
        # 1) '^' represents the beginning of the line and '$' represents the end of the line.
@@ -170,7 +169,7 @@ describe ContactFixer do
     before(:each) do
       @replacement_pattern = '123'
       @contact_number = "0118-999-881-999-119-725-3"
-      @fake_number = instance_double("PhoneNumber")
+      @cf = ContactFixer.new(nil, @out)
     end
     context 'no contacts exist' do
       it 'should return an empty collection' do
@@ -196,9 +195,9 @@ describe ContactFixer do
         # Arrange
         @cf = ContactFixer.new(nil, @out, '3$')
         expected_number = "0118-999-881-999-119-725-123"
-        expect(@fake_number).to receive(:value).and_return(@contact_number, expected_number)
-        allow(@fake_number).to receive(:value=).with(expected_number)
-        fake_person = instance_double('Person', :phone_numbers => [@fake_number], :names => [], :email_addresses => [])
+        expect(@mock_phone_number).to receive(:value).and_return(@contact_number, expected_number)
+        allow(@mock_phone_number).to receive(:value=).with(expected_number)
+        fake_person = instance_double('Person', :phone_numbers => [@mock_phone_number], :names => [], :email_addresses => [])
         connections = [fake_person]
         # Act
         @cf.update_connections_phone_numbers(connections, @replacement_pattern)
@@ -208,13 +207,13 @@ describe ContactFixer do
       end
     end
   end
+
   describe '.upload_connection_data' do
     context 'receives contact data' do
       it 'should send an update request' do
         # Arrange
         person_resource_name = "people/id452"
-        @fake_number = instance_double("PhoneNumber")
-        fake_person = instance_double('Person', :phone_numbers => [@fake_number], :resource_name => person_resource_name)
+        fake_person = instance_double('Person', :phone_numbers => [@mock_phone_number], :resource_name => person_resource_name)
         # Act and assert
         expect(@svc).to receive(:update_person_contact).with(person_resource_name, fake_person, {:update_person_fields => CONTACTS_PHONE_NUMBERS_FIELD_NAME})
         @cf.upload_connection_data(fake_person)
