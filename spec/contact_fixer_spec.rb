@@ -235,6 +235,7 @@ describe ContactFixer do
     before(:each) do
       @replacement_pattern = '123'
       @contact_number = "0118-999-881-999-119-725-3"
+
     end
     context 'no contacts exist' do
       it 'should return an empty collection' do
