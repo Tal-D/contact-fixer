@@ -18,7 +18,6 @@ describe ContactFixer do
     @svc = instance_double("PeopleServiceService")
     @mock_phone_number = instance_double("PhoneNumber")
     @out = StringIO.new
-    @cf = ContactFixer.new(@svc, @out)
   end
 
   describe '.is_non_roman' do
