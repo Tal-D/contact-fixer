@@ -103,7 +103,7 @@ describe ContactFixer do
         end
       end
     end
-  end  
+  end
 
   describe '.print_connections' do
     context 'he has only an email address' do
