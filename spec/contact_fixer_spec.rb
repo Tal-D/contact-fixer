@@ -235,11 +235,6 @@ describe ContactFixer do
     before(:each) do
       @replacement_pattern = '123'
       @contact_number = "0118-999-881-999-119-725-3"
-<<<<<<< HEAD
-
-=======
-      @cf = ContactFixer.new(nil, @out)
->>>>>>> merged changes from origin (1/1/21)
     end
     context 'no contacts exist' do
       it 'should return an empty collection' do
@@ -265,15 +260,10 @@ describe ContactFixer do
         # Arrange
         @cf = ContactFixer.new(nil, @out, '3$')
         expected_number = "0118-999-881-999-119-725-123"
-<<<<<<< HEAD
         expect(@mock_phone_number).to receive(:value).and_return(@contact_number)
         expect(@mock_phone_number).to receive(:value).and_return(expected_number).exactly(2).times
         allow(@mock_phone_number).to receive(:value=).with(expected_number)
 
-=======
-        expect(@mock_phone_number).to receive(:value).and_return(@contact_number, expected_number)
-        allow(@mock_phone_number).to receive(:value=).with(expected_number)
->>>>>>> merged changes from origin (1/1/21)
         fake_person = instance_double('Person', :phone_numbers => [@mock_phone_number], :names => [], :email_addresses => [])
         connections = [fake_person]
         # Act

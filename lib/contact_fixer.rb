@@ -99,25 +99,7 @@ class ContactFixer
     @filter = Regexp.new raw_filter
     @output.puts "No connections found" if contacts.connections.empty?
     contacts.connections.select do |person|
-<<<<<<< HEAD
       person.phone_numbers&.any? { |phone_number| phone_number.value.match(@filter) }
-=======
-      phone_numbers = person.phone_numbers
-
-      if phone_numbers.nil?
-        false
-      else
-        phone_numbers.any? { |phone_number| phone_number.value.match(@filter) }
-      end
-      emails = person.email_addresses
-      if emails.nil?
-        @output.puts "No emails found for connection"
-      else
-        @output.puts "- " + emails.map { |email| email.value }.inspect
-      end
-      # newline is always good
-      @output.puts ""
->>>>>>> merged changes from origin (1/1/21)
     end
   end
 
