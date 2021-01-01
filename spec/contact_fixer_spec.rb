@@ -66,6 +66,7 @@ describe ContactFixer do
       end
     end
   end
+
   describe '.print_connections' do
     context 'he has only an email address' do
       it 'prints the user with the email' do
