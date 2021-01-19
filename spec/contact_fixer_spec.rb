@@ -155,6 +155,7 @@ describe ContactFixer do
         allow(@svc).to receive_message_chain(:list_person_connections, :connections) {[person]}
         # Act
         @cf.print_connections(@cf.get_all_contacts)
+
         # Assert
         expect(@out.string).to include(HIGHLIGHTED_PHONE_NUMBER)
       end
